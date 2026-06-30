@@ -1,0 +1,8 @@
+{
+  "name": "Tabitas",
+  "description": "Catálogo deportivo de zapatillas y buzos con panel administrativo para gestionar productos, precios y pedidos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
