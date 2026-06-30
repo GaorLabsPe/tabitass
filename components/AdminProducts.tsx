@@ -243,51 +243,121 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                 </div>
               </div>
 
-              {/* Photos URL Inputs */}
+              {/* Photos & File Upload Inputs */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">URLs de Fotos (Máx. 3)</label>
-                <div className="space-y-2">
-                  {(editingProduct.images || []).map((url, index) => (
-                    <div key={index} className="flex gap-2">
-                      <div className="relative flex-grow">
-                        <input
-                          type="text"
-                          value={url}
-                          onChange={(e) => {
-                            const newImages = [...(editingProduct.images || [])];
-                            newImages[index] = e.target.value;
-                            handleFieldChange('images', newImages);
-                          }}
-                          placeholder="https://images.unsplash.com/photo-..."
-                          className="w-full text-xs px-3 py-2 pl-8 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white"
-                        />
-                        <Image className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
+                <label className="block text-xs font-bold text-slate-800 mb-2">
+                  Fotos del Producto (Máx. 3 - Se pueden adjuntar archivos o poner URLs)
+                </label>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                  {[0, 1, 2].map((index) => {
+                    const imageUrl = (editingProduct.images || [])[index];
+                    return (
+                      <div key={index} className="border border-slate-200 rounded-2xl p-3 bg-slate-50/50 flex flex-col items-center justify-between min-h-[140px] relative hover:border-slate-300 transition-all">
+                        {imageUrl ? (
+                          <div className="w-full flex flex-col items-center gap-2">
+                            <img
+                              src={imageUrl}
+                              alt={`Vista previa ${index + 1}`}
+                              className="w-16 h-16 object-cover rounded-xl border border-slate-200 shadow-xs"
+                            />
+                            <div className="text-[10px] text-slate-400 max-w-full truncate text-center font-mono px-1">
+                              {imageUrl.startsWith('data:') ? '📂 Archivo local' : '🔗 Enlace de internet'}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newImages = [...(editingProduct.images || [])];
+                                newImages.splice(index, 1);
+                                handleFieldChange('images', newImages);
+                              }}
+                              className="text-rose-500 hover:text-rose-600 text-xs font-bold flex items-center gap-1 mt-1.5"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Quitar
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-2 py-2">
+                            <div className="bg-slate-200/60 p-2 rounded-full text-slate-500">
+                              <Image className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-500 text-center">Foto {index + 1}</span>
+                            
+                            <div className="flex flex-col gap-1.5 w-full mt-1">
+                              <label className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-[10px] py-1.5 px-2 rounded-lg cursor-pointer text-center transition-all shadow-2xs">
+                                Adjuntar Foto
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    if (file.size > 3 * 1024 * 1024) {
+                                      alert('La imagen es demasiado grande. Por favor selecciona una de menos de 3MB.');
+                                      return;
+                                    }
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      if (typeof reader.result === 'string') {
+                                        const newImages = [...(editingProduct.images || [])];
+                                        newImages[index] = reader.result;
+                                        handleFieldChange('images', newImages);
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }}
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const url = prompt('Ingresa la URL de la imagen de Internet:');
+                                  if (url && url.trim() !== '') {
+                                    const newImages = [...(editingProduct.images || [])];
+                                    newImages[index] = url.trim();
+                                    handleFieldChange('images', newImages);
+                                  }
+                                }}
+                                className="border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-[9px] py-1 px-2 rounded-lg transition-all"
+                              >
+                                O pegar URL
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newImages = (editingProduct.images || []).filter((_, idx) => idx !== index);
-                          handleFieldChange('images', newImages);
-                        }}
-                        className="text-red-500 hover:text-red-600 p-2 border border-red-100 rounded-xl"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {(editingProduct.images || []).length < 3 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newImages = [...(editingProduct.images || []), ''];
-                        handleFieldChange('images', newImages);
-                      }}
-                      className="text-xs text-orange-500 font-bold hover:text-orange-600 flex items-center gap-1 mt-1"
-                    >
-                      + Añadir URL de imagen
-                    </button>
-                  )}
+                    );
+                  })}
                 </div>
+
+                {/* Collapsible Supabase Storage instructions right here in context */}
+                <details className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs mb-4">
+                  <summary className="font-bold text-slate-700 cursor-pointer select-none hover:text-slate-900 flex items-center gap-1.5">
+                    📦 Guía: ¿Cómo subir a Supabase Storage? (Click para abrir)
+                  </summary>
+                  <div className="mt-2.5 space-y-2 text-slate-600 pl-4 border-l-2 border-slate-300 leading-normal">
+                    <p>
+                      Para guardar estas imágenes físicamente en tu propio servidor de Supabase:
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>Usa la sección SQL en tu consola de Supabase.</li>
+                      <li>Crea un Bucket de almacenamiento llamado <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-orange-600">productos</code> (público).</li>
+                      <li>Sube el archivo mediante el SDK de JS con la siguiente línea:</li>
+                    </ol>
+                    <pre className="bg-slate-900 text-slate-200 p-2 rounded-lg text-[10px] overflow-x-auto font-mono">
+{`const { data, error } = await supabase.storage
+  .from('productos')
+  .upload(\`\${productId}/\${fileName}\`, file, {
+    cacheControl: '3600',
+    upsert: true
+  });`}
+                    </pre>
+                    <p>
+                      Luego obtienes la URL pública y la guardas en el campo <code className="bg-slate-100 px-1 py-0.5 rounded font-mono">images</code> de tu producto. ¡Las consultas SQL están en el panel de ayuda!
+                    </p>
+                  </div>
+                </details>
               </div>
 
               <div>
@@ -427,117 +497,206 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
           <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Productos Registrados ({products.length})</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                <th className="p-4">Producto</th>
-                <th className="p-4">Categoría</th>
-                <th className="p-4 text-center">Modalidad</th>
-                <th className="p-4 text-right">Costo Compra</th>
-                <th className="p-4 text-right">Margen</th>
-                <th className="p-4 text-right bg-orange-50/30 text-orange-600">Precio Final</th>
-                <th className="p-4 text-right text-emerald-600">Ganancia</th>
-                <th className="p-4 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 text-xs">
-              {products.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-400">
-                    No hay productos registrados. Haz clic en "Nuevo Producto" para empezar.
-                  </td>
+        <div>
+          {/* Desktop view: Hidden on mobile, shown on md screens up */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                  <th className="p-4">Producto</th>
+                  <th className="p-4">Categoría</th>
+                  <th className="p-4 text-center">Modalidad</th>
+                  <th className="p-4 text-right">Costo Compra</th>
+                  <th className="p-4 text-right">Margen</th>
+                  <th className="p-4 text-right bg-orange-50/30 text-orange-600">Precio Final</th>
+                  <th className="p-4 text-right text-emerald-600">Ganancia</th>
+                  <th className="p-4 text-center">Acciones</th>
                 </tr>
-              ) : (
-                products.map((prod) => {
-                  const finalPrice = calculateFinalPrice(prod);
-                  const marginLabel = prod.marginType === 'percentage' ? `${prod.margin}%` : `S/ ${prod.margin}`;
-                  const profit = finalPrice - prod.cost;
+              </thead>
+              <tbody className="divide-y divide-slate-50 text-xs">
+                {products.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-slate-400">
+                      No hay productos registrados. Haz clic en "Nuevo Producto" para empezar.
+                    </td>
+                  </tr>
+                ) : (
+                  products.map((prod) => {
+                    const finalPrice = calculateFinalPrice(prod);
+                    const marginLabel = prod.marginType === 'percentage' ? `${prod.margin}%` : `S/ ${prod.margin}`;
+                    const profit = finalPrice - prod.cost;
 
-                  return (
-                    <tr key={prod.id} className="hover:bg-slate-50/30 transition-colors">
-                      {/* Name / Brand / Image */}
-                      <td className="p-4 flex items-center gap-3">
-                        <img
-                          src={prod.images[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600'}
-                          alt={prod.name}
-                          className="w-10 h-10 object-cover rounded-lg bg-slate-100 border border-slate-100"
-                        />
-                        <div>
-                          <div className="font-bold text-slate-900 leading-tight">{prod.name}</div>
-                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{prod.brand}</div>
-                        </div>
-                      </td>
+                    return (
+                      <tr key={prod.id} className="hover:bg-slate-50/30 transition-colors">
+                        {/* Name / Brand / Image */}
+                        <td className="p-4 flex items-center gap-3">
+                          <img
+                            src={prod.images[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600'}
+                            alt={prod.name}
+                            className="w-10 h-10 object-cover rounded-lg bg-slate-100 border border-slate-100"
+                          />
+                          <div>
+                            <div className="font-bold text-slate-900 leading-tight">{prod.name}</div>
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{prod.brand}</div>
+                          </div>
+                        </td>
 
-                      {/* Category */}
-                      <td className="p-4">
-                        <span className="inline-flex bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-md">
-                          {prod.category}
-                        </span>
-                      </td>
-
-                      {/* Modality */}
-                      <td className="p-4 text-center">
-                        {prod.modality === 'stock' ? (
-                          <span className="inline-flex bg-emerald-100 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                            Stock
+                        {/* Category */}
+                        <td className="p-4">
+                          <span className="inline-flex bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-md">
+                            {prod.category}
                           </span>
-                        ) : (
-                          <span className="inline-flex bg-amber-100 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                            Encargo ({prod.leadTimeDays}d)
+                        </td>
+
+                        {/* Modality */}
+                        <td className="p-4 text-center">
+                          {prod.modality === 'stock' ? (
+                            <span className="inline-flex bg-emerald-100 text-emerald-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                              Stock
+                            </span>
+                          ) : (
+                            <span className="inline-flex bg-amber-100 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                              Encargo ({prod.leadTimeDays}d)
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Cost */}
+                        <td className="p-4 text-right font-medium text-slate-500">
+                          {formatCurrency(prod.cost)}
+                        </td>
+
+                        {/* Margin */}
+                        <td className="p-4 text-right font-medium text-slate-600">
+                          {marginLabel}
+                        </td>
+
+                        {/* Final Selling Price */}
+                        <td className="p-4 text-right font-extrabold text-slate-900 font-display bg-orange-50/30">
+                          {formatCurrency(finalPrice)}
+                        </td>
+
+                        {/* Profit */}
+                        <td className="p-4 text-right font-bold text-emerald-600">
+                          {formatCurrency(profit)}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="p-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => handleStartEdit(prod)}
+                              className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition-colors"
+                              title="Editar"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`¿Estás seguro de que deseas eliminar ${prod.name}?`)) {
+                                  onDeleteProduct(prod.id);
+                                }
+                              }}
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile view: Hidden on desktop, shown on mobile screens */}
+          <div className="block md:hidden divide-y divide-slate-100">
+            {products.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs font-medium">
+                No hay productos registrados. Haz clic en "Nuevo Producto" para empezar.
+              </div>
+            ) : (
+              products.map((prod) => {
+                const finalPrice = calculateFinalPrice(prod);
+                const marginLabel = prod.marginType === 'percentage' ? `${prod.margin}%` : `S/ ${prod.margin}`;
+                const profit = finalPrice - prod.cost;
+
+                return (
+                  <div key={prod.id} className="p-4 space-y-3 hover:bg-slate-50/20 transition-colors">
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={prod.images[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600'}
+                        alt={prod.name}
+                        className="w-16 h-16 object-cover rounded-xl bg-slate-100 border border-slate-200 flex-shrink-0"
+                      />
+                      <div className="min-w-0 flex-grow">
+                        <div className="font-bold text-slate-900 leading-snug">{prod.name}</div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">{prod.brand}</div>
+                        
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          <span className="bg-slate-100 text-slate-700 text-[9px] font-semibold px-2 py-0.5 rounded">
+                            {prod.category}
                           </span>
-                        )}
-                      </td>
-
-                      {/* Cost */}
-                      <td className="p-4 text-right font-medium text-slate-500">
-                        {formatCurrency(prod.cost)}
-                      </td>
-
-                      {/* Margin */}
-                      <td className="p-4 text-right font-medium text-slate-600">
-                        {marginLabel}
-                      </td>
-
-                      {/* Final Selling Price */}
-                      <td className="p-4 text-right font-extrabold text-slate-900 font-display bg-orange-50/30">
-                        {formatCurrency(finalPrice)}
-                      </td>
-
-                      {/* Profit */}
-                      <td className="p-4 text-right font-bold text-emerald-600">
-                        {formatCurrency(profit)}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => handleStartEdit(prod)}
-                            className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 p-1.5 rounded-lg transition-colors"
-                            title="Editar"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm(`¿Estás seguro de que deseas eliminar ${prod.name}?`)) {
-                                onDeleteProduct(prod.id);
-                              }
-                            }}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {prod.modality === 'stock' ? (
+                            <span className="bg-emerald-100 text-emerald-800 text-[9px] font-semibold px-2 py-0.5 rounded-full">
+                              Stock
+                            </span>
+                          ) : (
+                            <span className="bg-amber-100 text-amber-800 text-[9px] font-semibold px-2 py-0.5 rounded-full">
+                              Encargo ({prod.leadTimeDays}d)
+                            </span>
+                          )}
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 text-xs text-slate-600">
+                      <div>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">Costo</span>
+                        <span className="font-bold text-slate-800">{formatCurrency(prod.cost)}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">Margen</span>
+                        <span className="font-bold text-slate-800">{marginLabel}</span>
+                      </div>
+                      <div className="mt-1 border-t border-dashed border-slate-200/60 pt-1">
+                        <span className="text-orange-500 block text-[9px] uppercase font-bold tracking-wider">Precio Final</span>
+                        <span className="font-black text-orange-600 text-sm">{formatCurrency(finalPrice)}</span>
+                      </div>
+                      <div className="mt-1 border-t border-dashed border-slate-200/60 pt-1">
+                        <span className="text-emerald-500 block text-[9px] uppercase font-bold tracking-wider">Ganancia</span>
+                        <span className="font-black text-emerald-600 text-sm">{formatCurrency(profit)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        onClick={() => handleStartEdit(prod)}
+                        className="flex items-center justify-center gap-1.5 text-xs text-slate-700 bg-slate-100 hover:bg-slate-200 font-bold px-3.5 py-2 rounded-xl transition-all min-h-[38px]"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`¿Estás seguro de que deseas eliminar ${prod.name}?`)) {
+                            onDeleteProduct(prod.id);
+                          }
+                        }}
+                        className="flex items-center justify-center gap-1.5 text-xs text-rose-600 bg-rose-50 hover:bg-rose-100 font-bold px-3.5 py-2 rounded-xl transition-all min-h-[38px]"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
     </div>

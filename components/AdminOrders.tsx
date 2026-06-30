@@ -451,147 +451,314 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({
 
       {/* Orders Table */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                <th className="p-4">Pedido / Fecha</th>
-                <th className="p-4">Cliente</th>
-                <th className="p-4">Producto & Talla</th>
-                <th className="p-4 text-right">Precio Total</th>
-                <th className="p-4 text-right">Adelanto</th>
-                <th className="p-4 text-right">Saldo Restante</th>
-                <th className="p-4 text-center">Estado Pago</th>
-                <th className="p-4 text-center">Estado Entrega</th>
-                <th className="p-4 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 text-xs">
-              {orders.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="p-8 text-center text-slate-400">
-                    No hay pedidos registrados aún. ¡Registra tu primera venta manual o espera mensajes de clientes!
-                  </td>
+        <div>
+          {/* Desktop View: Hidden on mobile/tablet, shown on lg screens up */}
+          <div className="hidden lg:block overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                  <th className="p-4">Pedido / Fecha</th>
+                  <th className="p-4">Cliente</th>
+                  <th className="p-4">Producto & Talla</th>
+                  <th className="p-4 text-right">Precio Total</th>
+                  <th className="p-4 text-right">Adelanto</th>
+                  <th className="p-4 text-right">Saldo Restante</th>
+                  <th className="p-4 text-center">Estado Pago</th>
+                  <th className="p-4 text-center">Estado Entrega</th>
+                  <th className="p-4 text-center">Acciones</th>
                 </tr>
-              ) : (
-                orders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-slate-50/30 transition-colors">
-                    {/* ID / Date */}
-                    <td className="p-4">
-                      <div className="font-mono text-[10px] font-bold text-slate-400">#{ord.id}</div>
-                      <div className="text-slate-500 text-[11px] mt-0.5">
-                        {new Date(ord.date).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                      </div>
+              </thead>
+              <tbody className="divide-y divide-slate-50 text-xs">
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="p-8 text-center text-slate-400">
+                      No hay pedidos registrados aún. ¡Registra tu primera venta manual o espera mensajes de clientes!
                     </td>
+                  </tr>
+                ) : (
+                  orders.map((ord) => (
+                    <tr key={ord.id} className="hover:bg-slate-50/30 transition-colors">
+                      {/* ID / Date */}
+                      <td className="p-4">
+                        <div className="font-mono text-[10px] font-bold text-slate-400">#{ord.id}</div>
+                        <div className="text-slate-500 text-[11px] mt-0.5">
+                          {new Date(ord.date).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        </div>
+                      </td>
 
-                    {/* Client Info */}
-                    <td className="p-4">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="font-bold text-slate-900">{ord.clientName}</span>
-                        {ord.clientType === 'trusted' && (
-                          <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.5 rounded-md">
-                            Confianza
-                          </span>
+                      {/* Client Info */}
+                      <td className="p-4">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-slate-900">{ord.clientName}</span>
+                          {ord.clientType === 'trusted' && (
+                            <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.5 rounded-md">
+                              Confianza
+                            </span>
+                          )}
+                          {ord.shippingType && (
+                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md ${
+                              ord.shippingType === 'provincia' 
+                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' 
+                                : 'bg-orange-50 text-orange-700 border border-orange-100'
+                            }`}>
+                              {ord.shippingType === 'provincia' ? 'Otras Provincias' : 'Huancayo'}
+                            </span>
+                          )}
+                        </div>
+                        <a
+                          href={`https://wa.me/51${ord.clientPhone.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold mt-1"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 fill-emerald-100" />
+                          {ord.clientPhone}
+                        </a>
+                        {ord.shippingAddress && (
+                          <div className="text-[10px] text-slate-400 mt-1 max-w-[180px] bg-slate-50/50 px-1.5 py-1 rounded border border-slate-100 italic leading-normal">
+                            📍 {ord.shippingAddress}
+                          </div>
                         )}
-                        {ord.shippingType && (
-                          <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-md ${
-                            ord.shippingType === 'provincia' 
-                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' 
-                              : 'bg-orange-50 text-orange-700 border border-orange-100'
-                          }`}>
-                            {ord.shippingType === 'provincia' ? 'Otras Provincias' : 'Huancayo'}
-                          </span>
-                        )}
-                      </div>
+                      </td>
+
+                      {/* Product & Size */}
+                      <td className="p-4">
+                        <div className="space-y-1.5 max-w-xs">
+                          {ord.items && ord.items.map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <img
+                                src={item.productImage || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600'}
+                                alt={item.productName}
+                                className="w-8 h-8 object-cover rounded border border-slate-100 bg-slate-50 flex-shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <div className="font-semibold text-slate-800 leading-tight truncate text-[11px]" title={item.productName}>
+                                  {item.productName}
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                  Talla: <span className="font-mono font-bold text-slate-600">{item.sizeSelected}</span>
+                                  {item.quantity > 1 && (
+                                    <span className="ml-1 text-orange-600 font-bold">x{item.quantity}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+
+                      {/* Financial Numbers */}
+                      <td className="p-4 text-right font-bold text-slate-900 font-display">
+                        {formatCurrency(ord.totalPrice)}
+                      </td>
+                      <td className="p-4 text-right font-medium text-slate-600">
+                        {formatCurrency(ord.advanceRequired)}
+                      </td>
+                      <td className="p-4 text-right font-medium text-orange-600">
+                        {formatCurrency(ord.balanceDue)}
+                      </td>
+
+                      {/* Payment Status Dropdown selector */}
+                      <td className="p-4 text-center">
+                        <select
+                          value={ord.paymentStatus}
+                          onChange={(e) =>
+                            onUpdateOrderStatus(ord.id, 'paymentStatus', e.target.value)
+                          }
+                          className={`text-[10px] font-bold py-1 px-2.5 rounded-full border border-transparent focus:ring-1 focus:ring-slate-300 ${
+                            ord.paymentStatus === 'completado'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : ord.paymentStatus === 'saldo_pendiente'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          <option value="adelanto_pagado">Adelanto Pagado</option>
+                          <option value="saldo_pendiente">Saldo Pendiente</option>
+                          <option value="completado">Completado</option>
+                        </select>
+                      </td>
+
+                      {/* Delivery Status Dropdown selector */}
+                      <td className="p-4 text-center">
+                        <select
+                          value={ord.deliveryStatus}
+                          onChange={(e) =>
+                            onUpdateOrderStatus(ord.id, 'deliveryStatus', e.target.value)
+                          }
+                          className={`text-[10px] font-bold py-1 px-2.5 rounded-full border border-transparent focus:ring-1 focus:ring-slate-300 ${
+                            ord.deliveryStatus === 'entregado'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : ord.deliveryStatus === 'en_camino'
+                              ? 'bg-purple-100 text-purple-800'
+                              : ord.deliveryStatus === 'cancelado'
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-slate-100 text-slate-800'
+                          }`}
+                        >
+                          <option value="pendiente">Pendiente</option>
+                          <option value="en_camino">En Camino</option>
+                          <option value="entregado">Entregado</option>
+                          <option value="cancelado">Cancelado</option>
+                        </select>
+                      </td>
+
+                      {/* Quick actions */}
+                      <td className="p-4 text-center">
+                        <div className="flex justify-center">
+                          <button
+                            onClick={() => {
+                              if (confirm(`¿Eliminar registro de pedido de ${ord.clientName}?`)) {
+                                onDeleteOrder(ord.id);
+                              }
+                            }}
+                            className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                            title="Eliminar pedido"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile View: Hidden on desktop, shown on small/medium screens */}
+          <div className="block lg:hidden divide-y divide-slate-100">
+            {orders.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs font-medium">
+                No hay pedidos registrados aún. ¡Registra tu primera venta manual o espera mensajes de clientes!
+              </div>
+            ) : (
+              orders.map((ord) => (
+                <div key={ord.id} className="p-4 space-y-3 hover:bg-slate-50/25 transition-colors">
+                  {/* Header: ID and Date */}
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-mono font-black text-slate-400">ID: #{ord.id}</span>
+                    <span className="text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded">
+                      {new Date(ord.date).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  {/* Client name, Phone & badgess */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-slate-900 text-sm leading-tight">{ord.clientName}</span>
+                      {ord.clientType === 'trusted' && (
+                        <span className="text-[9px] bg-amber-100 text-amber-900 font-black px-1.5 py-0.5 rounded">
+                          Confianza
+                        </span>
+                      )}
+                      {ord.shippingType && (
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                          ord.shippingType === 'provincia' 
+                            ? 'bg-indigo-100 text-indigo-900' 
+                            : 'bg-orange-100 text-orange-900'
+                        }`}>
+                          {ord.shippingType === 'provincia' ? 'Provincia' : 'Huancayo'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
                       <a
                         href={`https://wa.me/51${ord.clientPhone.replace(/\D/g, '')}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold mt-1"
+                        className="inline-flex items-center gap-1.5 text-xs text-emerald-700 hover:text-emerald-800 font-bold bg-emerald-50 border border-emerald-100/50 px-2.5 py-1.5 rounded-xl min-h-[38px]"
                       >
                         <MessageSquare className="w-3.5 h-3.5 fill-emerald-100" />
-                        {ord.clientPhone}
+                        {ord.clientPhone} (WhatsApp)
                       </a>
-                      {ord.shippingAddress && (
-                        <div className="text-[10px] text-slate-400 mt-1 max-w-[180px] bg-slate-50/50 px-1.5 py-1 rounded border border-slate-100 italic leading-normal">
-                          📍 {ord.shippingAddress}
-                        </div>
-                      )}
-                    </td>
+                    </div>
 
-                    {/* Product & Size */}
-                    <td className="p-4">
-                      <div className="space-y-1.5 max-w-xs">
-                        {ord.items && ord.items.map((item, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <img
-                              src={item.productImage || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600'}
-                              alt={item.productName}
-                              className="w-8 h-8 object-cover rounded border border-slate-100 bg-slate-50 flex-shrink-0"
-                            />
-                            <div className="min-w-0">
-                              <div className="font-semibold text-slate-800 leading-tight truncate text-[11px]" title={item.productName}>
-                                {item.productName}
-                              </div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">
-                                Talla: <span className="font-mono font-bold text-slate-600">{item.sizeSelected}</span>
-                                {item.quantity > 1 && (
-                                  <span className="ml-1 text-orange-600 font-bold">x{item.quantity}</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                    {ord.shippingAddress && (
+                      <div className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100 italic">
+                        📍 {ord.shippingAddress}
                       </div>
-                    </td>
+                    )}
+                  </div>
 
-                    {/* Financial Numbers */}
-                    <td className="p-4 text-right font-bold text-slate-900 font-display">
-                      {formatCurrency(ord.totalPrice)}
-                    </td>
-                    <td className="p-4 text-right font-medium text-slate-600">
-                      {formatCurrency(ord.advanceRequired)}
-                    </td>
-                    <td className="p-4 text-right font-medium text-orange-600">
-                      {formatCurrency(ord.balanceDue)}
-                    </td>
+                  {/* Items list */}
+                  <div className="border-t border-b border-dashed border-slate-200 py-2.5 space-y-2">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Productos</span>
+                    {ord.items && ord.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <img
+                          src={item.productImage || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600'}
+                          alt={item.productName}
+                          className="w-10 h-10 object-cover rounded-lg border border-slate-200"
+                        />
+                        <div className="min-w-0 flex-grow">
+                          <div className="font-semibold text-slate-800 text-xs leading-snug truncate">{item.productName}</div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            Talla: <span className="font-mono font-bold text-slate-600">{item.sizeSelected}</span>
+                            {item.quantity > 1 && (
+                              <span className="ml-1.5 text-orange-600 font-bold">x{item.quantity}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-                    {/* Payment Status Dropdown selector */}
-                    <td className="p-4 text-center">
+                  {/* Pricing grid */}
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="bg-slate-50 p-2 rounded-xl border border-slate-100/60">
+                      <span className="text-[9px] text-slate-400 uppercase font-bold block">Total</span>
+                      <span className="text-xs font-black text-slate-800 font-display">{formatCurrency(ord.totalPrice)}</span>
+                    </div>
+                    <div className="bg-slate-50 p-2 rounded-xl border border-slate-100/60">
+                      <span className="text-[9px] text-slate-400 uppercase font-bold block">Adelanto</span>
+                      <span className="text-xs font-bold text-slate-700 font-display">{formatCurrency(ord.advanceRequired)}</span>
+                    </div>
+                    <div className="bg-orange-50/50 p-2 rounded-xl border border-orange-100/30">
+                      <span className="text-[9px] text-orange-500 uppercase font-bold block font-sans">Saldo</span>
+                      <span className="text-xs font-black text-orange-600 font-display">{formatCurrency(ord.balanceDue)}</span>
+                    </div>
+                  </div>
+
+                  {/* Selectors */}
+                  <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-slate-400 uppercase font-extrabold tracking-wider block">Estado Pago</label>
                       <select
                         value={ord.paymentStatus}
                         onChange={(e) =>
                           onUpdateOrderStatus(ord.id, 'paymentStatus', e.target.value)
                         }
-                        className={`text-[10px] font-bold py-1 px-2.5 rounded-full border border-transparent focus:ring-1 focus:ring-slate-300 ${
+                        className={`w-full text-xs font-bold py-2 px-2.5 rounded-xl border border-slate-200 focus:ring-1 focus:ring-slate-300 ${
                           ord.paymentStatus === 'completado'
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-100'
                             : ord.paymentStatus === 'saldo_pendiente'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-amber-100 text-amber-800'
+                            ? 'bg-blue-50 text-blue-800 border-blue-100'
+                            : 'bg-amber-50 text-amber-800 border-amber-100'
                         }`}
                       >
                         <option value="adelanto_pagado">Adelanto Pagado</option>
                         <option value="saldo_pendiente">Saldo Pendiente</option>
                         <option value="completado">Completado</option>
                       </select>
-                    </td>
+                    </div>
 
-                    {/* Delivery Status Dropdown selector */}
-                    <td className="p-4 text-center">
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-slate-400 uppercase font-extrabold tracking-wider block">Entrega</label>
                       <select
                         value={ord.deliveryStatus}
                         onChange={(e) =>
                           onUpdateOrderStatus(ord.id, 'deliveryStatus', e.target.value)
                         }
-                        className={`text-[10px] font-bold py-1 px-2.5 rounded-full border border-transparent focus:ring-1 focus:ring-slate-300 ${
+                        className={`w-full text-xs font-bold py-2 px-2.5 rounded-xl border border-slate-200 focus:ring-1 focus:ring-slate-300 ${
                           ord.deliveryStatus === 'entregado'
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-100'
                             : ord.deliveryStatus === 'en_camino'
-                            ? 'bg-purple-100 text-purple-800'
+                            ? 'bg-purple-50 text-purple-800 border-purple-100'
                             : ord.deliveryStatus === 'cancelado'
-                            ? 'bg-rose-100 text-rose-800'
-                            : 'bg-slate-100 text-slate-800'
+                            ? 'bg-rose-50 text-rose-800 border-rose-100'
+                            : 'bg-slate-50 text-slate-800 border-slate-100'
                         }`}
                       >
                         <option value="pendiente">Pendiente</option>
@@ -599,29 +766,27 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({
                         <option value="entregado">Entregado</option>
                         <option value="cancelado">Cancelado</option>
                       </select>
-                    </td>
+                    </div>
+                  </div>
 
-                    {/* Quick actions */}
-                    <td className="p-4 text-center">
-                      <div className="flex justify-center">
-                        <button
-                          onClick={() => {
-                            if (confirm(`¿Eliminar registro de pedido de ${ord.clientName}?`)) {
-                              onDeleteOrder(ord.id);
-                            }
-                          }}
-                          className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                          title="Eliminar pedido"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                  {/* Actions */}
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={() => {
+                        if (confirm(`¿Eliminar registro de pedido de ${ord.clientName}?`)) {
+                          onDeleteOrder(ord.id);
+                        }
+                      }}
+                      className="text-xs text-rose-600 bg-rose-50 hover:bg-rose-100 font-bold px-3 py-2 rounded-xl transition-all min-h-[38px] flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Eliminar Registro
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>
