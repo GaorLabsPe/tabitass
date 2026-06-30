@@ -54,7 +54,18 @@ export default function App() {
 
   const [adminPassword, setAdminPassword] = useState<string>(() => {
     const local = localStorage.getItem('tabitas_admin_password');
-    return local ? JSON.parse(local) : 'admin123';
+    if (local) {
+      try {
+        const parsed = JSON.parse(local);
+        if (parsed === 'admin123' || parsed === '_princesa') {
+          return 'princesa';
+        }
+        return parsed;
+      } catch (e) {
+        return 'princesa';
+      }
+    }
+    return 'princesa';
   });
 
   // Shopping Cart States
