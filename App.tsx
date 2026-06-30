@@ -48,6 +48,11 @@ import { motion, AnimatePresence } from 'motion/react';
 
 const SUPABASE_SQL_SETUP = `CREATE SCHEMA IF NOT EXISTS tabitass;
 
+-- 0. Eliminar tablas previas para evitar conflictos de columnas (camelCase vs snake_case)
+DROP TABLE IF EXISTS tabitass.products CASCADE;
+DROP TABLE IF EXISTS tabitass.orders CASCADE;
+DROP TABLE IF EXISTS tabitass.settings CASCADE;
+
 -- 1. Crear tabla de productos
 CREATE TABLE IF NOT EXISTS tabitass.products (
   id TEXT PRIMARY KEY,
