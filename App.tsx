@@ -46,8 +46,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-const SUPABASE_SQL_SETUP = `-- 1. Crear tabla de productos
-CREATE TABLE IF NOT EXISTS products (
+const SUPABASE_SQL_SETUP = `CREATE SCHEMA IF NOT EXISTS tabitass;
+
+-- 1. Crear tabla de productos
+CREATE TABLE IF NOT EXISTS tabitass.products (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   category TEXT NOT NULL,
@@ -55,58 +57,58 @@ CREATE TABLE IF NOT EXISTS products (
   sizes JSONB NOT NULL DEFAULT '[]',
   images JSONB NOT NULL DEFAULT '[]',
   cost NUMERIC NOT NULL DEFAULT 0,
-  "marginType" TEXT NOT NULL DEFAULT 'percentage',
+  margin_type TEXT NOT NULL DEFAULT 'percentage',
   margin NUMERIC NOT NULL DEFAULT 0,
   modality TEXT NOT NULL DEFAULT 'stock',
-  "leadTimeDays" INTEGER NOT NULL DEFAULT 0,
-  "advanceType" TEXT NOT NULL DEFAULT 'percentage',
-  "advanceValue" NUMERIC NOT NULL DEFAULT 0,
+  lead_time_days INTEGER NOT NULL DEFAULT 0,
+  advance_type TEXT NOT NULL DEFAULT 'percentage',
+  advance_value NUMERIC NOT NULL DEFAULT 0,
   description TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- 2. Crear tabla de pedidos (orders)
-CREATE TABLE IF NOT EXISTS orders (
+CREATE TABLE IF NOT EXISTS tabitass.orders (
   id TEXT PRIMARY KEY,
   date TEXT NOT NULL,
-  "clientName" TEXT NOT NULL,
-  "clientPhone" TEXT NOT NULL,
-  "clientType" TEXT NOT NULL DEFAULT 'general',
-  "shippingType" TEXT NOT NULL DEFAULT 'huancayo',
-  "shippingAddress" TEXT DEFAULT '',
+  client_name TEXT NOT NULL,
+  client_phone TEXT NOT NULL,
+  client_type TEXT NOT NULL DEFAULT 'general',
+  shipping_type TEXT NOT NULL DEFAULT 'huancayo',
+  shipping_address TEXT DEFAULT '',
   items JSONB NOT NULL DEFAULT '[]',
-  "totalPrice" NUMERIC NOT NULL DEFAULT 0,
-  "advanceRequired" NUMERIC NOT NULL DEFAULT 0,
-  "balanceDue" NUMERIC NOT NULL DEFAULT 0,
-  "paymentStatus" TEXT NOT NULL DEFAULT 'pendiente',
-  "deliveryStatus" TEXT NOT NULL DEFAULT 'pendiente',
+  total_price NUMERIC NOT NULL DEFAULT 0,
+  advance_required NUMERIC NOT NULL DEFAULT 0,
+  balance_due NUMERIC NOT NULL DEFAULT 0,
+  payment_status TEXT NOT NULL DEFAULT 'pendiente',
+  delivery_status TEXT NOT NULL DEFAULT 'pendiente',
   notes TEXT DEFAULT '',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- 3. Crear tabla de configuración (settings)
-CREATE TABLE IF NOT EXISTS settings (
+CREATE TABLE IF NOT EXISTS tabitass.settings (
   id TEXT PRIMARY KEY DEFAULT 'default',
-  "whatsappNumber" TEXT,
-  "companyName" TEXT DEFAULT 'Tabitas Store',
-  "yapeNumber" TEXT,
-  "yapeName" TEXT,
-  "plinNumber" TEXT,
-  "plinName" TEXT,
-  "advanceTypeRule" TEXT DEFAULT 'percentage',
-  "flatAdvanceAmount" NUMERIC DEFAULT 0,
+  whatsapp_number TEXT,
+  company_name TEXT DEFAULT 'Tabitas Store',
+  yape_number TEXT,
+  yape_name TEXT,
+  plin_number TEXT,
+  plin_name TEXT,
+  advance_type_rule TEXT DEFAULT 'percentage',
+  flat_advance_amount NUMERIC DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- Insertar configuración inicial por defecto
-INSERT INTO settings (id, "whatsappNumber", "companyName", "yapeNumber", "yapeName", "plinNumber", "plinName", "advanceTypeRule", "flatAdvanceAmount")
+INSERT INTO tabitass.settings (id, whatsapp_number, company_name, yape_number, yape_name, plin_number, plin_name, advance_type_rule, flat_advance_amount)
 VALUES ('default', '51900000000', 'Tabitas Store', '900000000', 'Administrador', '900000000', 'Administrador', 'percentage', 50)
 ON CONFLICT (id) DO NOTHING;
 
 -- Desactivar RLS para acceso público simplificado
-ALTER TABLE products DISABLE ROW LEVEL SECURITY;
-ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
-ALTER TABLE settings DISABLE ROW LEVEL SECURITY;`;
+ALTER TABLE tabitass.products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tabitass.orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE tabitass.settings DISABLE ROW LEVEL SECURITY;`;
 
 export default function App() {
   // Global Persisted States
