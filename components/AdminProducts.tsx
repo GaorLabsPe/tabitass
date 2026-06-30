@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { calculateFinalPrice, calculateAdvance, formatCurrency } from '../utils';
-import { Plus, Edit2, Trash2, Save, X, Eye, Image, Info } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Eye, Image, Info, Loader2 } from 'lucide-react';
+import { isSupabaseConfigured, uploadProductImage } from '../supabaseClient';
 
 interface AdminProductsProps {
   products: Product[];
   onAddProduct: (product: Product) => void;
   onUpdateProduct: (product: Product) => void;
   onDeleteProduct: (id: string) => void;
+  supabaseStatus?: string;
 }
 
 const POPULAR_SIZES_SNEAKERS = ['36', '37', '38', '39', '40', '41', '42', '43', '44'];
@@ -18,9 +20,11 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
+  supabaseStatus,
 }) => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
+  const [uploadingMap, setUploadingMap] = useState<Record<number, boolean>>({});
 
   // Default values for new products
   const createEmptyProduct = (): Partial<Product> => ({
@@ -254,15 +258,21 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                     const imageUrl = (editingProduct.images || [])[index];
                     return (
                       <div key={index} className="border border-slate-200 rounded-2xl p-3 bg-slate-50/50 flex flex-col items-center justify-between min-h-[140px] relative hover:border-slate-300 transition-all">
-                        {imageUrl ? (
+                        {uploadingMap[index] ? (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-2 py-4">
+                            <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
+                            <span className="text-[10px] font-bold text-slate-500">Subiendo a Supabase...</span>
+                          </div>
+                        ) : imageUrl ? (
                           <div className="w-full flex flex-col items-center gap-2">
                             <img
                               src={imageUrl}
                               alt={`Vista previa ${index + 1}`}
                               className="w-16 h-16 object-cover rounded-xl border border-slate-200 shadow-xs"
+                              referrerPolicy="no-referrer"
                             />
                             <div className="text-[10px] text-slate-400 max-w-full truncate text-center font-mono px-1">
-                              {imageUrl.startsWith('data:') ? '📂 Archivo local' : '🔗 Enlace de internet'}
+                              {imageUrl.startsWith('data:') ? '📂 Archivo local (temporal)' : imageUrl.includes('supabase') ? '☁️ Guardado en Supabase' : '🔗 Enlace de internet'}
                             </div>
                             <button
                               type="button"
@@ -290,22 +300,44 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                                   type="file"
                                   accept="image/*"
                                   className="hidden"
-                                  onChange={(e) => {
+                                  onChange={async (e) => {
                                     const file = e.target.files?.[0];
                                     if (!file) return;
-                                    if (file.size > 3 * 1024 * 1024) {
-                                      alert('La imagen es demasiado grande. Por favor selecciona una de menos de 3MB.');
+                                    if (file.size > 5 * 1024 * 1024) {
+                                      alert('La imagen es demasiado grande. Por favor selecciona una de menos de 5MB.');
                                       return;
                                     }
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                      if (typeof reader.result === 'string') {
-                                        const newImages = [...(editingProduct.images || [])];
-                                        newImages[index] = reader.result;
-                                        handleFieldChange('images', newImages);
+
+                                    const productId = editingProduct.id || `prod_${Date.now()}`;
+
+                                    if (isSupabaseConfigured && supabaseStatus === 'connected') {
+                                      setUploadingMap(prev => ({ ...prev, [index]: true }));
+                                      try {
+                                        const publicUrl = await uploadProductImage(productId, file);
+                                        if (publicUrl) {
+                                          const newImages = [...(editingProduct.images || [])];
+                                          newImages[index] = publicUrl;
+                                          handleFieldChange('images', newImages);
+                                        } else {
+                                          alert('Error al subir la imagen. Asegúrate de haber creado un bucket público llamado "productos" en tu Supabase Storage.');
+                                        }
+                                      } catch (err) {
+                                        console.error(err);
+                                        alert('Error al conectar con Supabase Storage.');
+                                      } finally {
+                                        setUploadingMap(prev => ({ ...prev, [index]: false }));
                                       }
-                                    };
-                                    reader.readAsDataURL(file);
+                                    } else {
+                                      const reader = new FileReader();
+                                      reader.onloadend = () => {
+                                        if (typeof reader.result === 'string') {
+                                          const newImages = [...(editingProduct.images || [])];
+                                          newImages[index] = reader.result;
+                                          handleFieldChange('images', newImages);
+                                        }
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
                                   }}
                                 />
                               </label>

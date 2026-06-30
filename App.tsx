@@ -8,6 +8,17 @@ import { AdminOrders } from './components/AdminOrders';
 import { AdminSettingsPanel } from './components/AdminSettings';
 import { calculateFinalPrice, calculateAdvance, formatCurrency, getCartWhatsAppUrl } from './utils';
 import {
+  isSupabaseConfigured,
+  getProductsDb,
+  saveProductDb,
+  deleteProductDb,
+  getOrdersDb,
+  saveOrderDb,
+  deleteOrderDb,
+  getSettingsDb,
+  saveSettingsDb
+} from './supabaseClient';
+import {
   Search,
   Filter,
   Lock,
@@ -34,6 +45,68 @@ import {
   Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
+const SUPABASE_SQL_SETUP = `-- 1. Crear tabla de productos
+CREATE TABLE IF NOT EXISTS products (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  brand TEXT NOT NULL,
+  sizes JSONB NOT NULL DEFAULT '[]',
+  images JSONB NOT NULL DEFAULT '[]',
+  cost NUMERIC NOT NULL DEFAULT 0,
+  "marginType" TEXT NOT NULL DEFAULT 'percentage',
+  margin NUMERIC NOT NULL DEFAULT 0,
+  modality TEXT NOT NULL DEFAULT 'stock',
+  "leadTimeDays" INTEGER NOT NULL DEFAULT 0,
+  "advanceType" TEXT NOT NULL DEFAULT 'percentage',
+  "advanceValue" NUMERIC NOT NULL DEFAULT 0,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 2. Crear tabla de pedidos (orders)
+CREATE TABLE IF NOT EXISTS orders (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  "clientName" TEXT NOT NULL,
+  "clientPhone" TEXT NOT NULL,
+  "clientType" TEXT NOT NULL DEFAULT 'general',
+  "shippingType" TEXT NOT NULL DEFAULT 'huancayo',
+  "shippingAddress" TEXT DEFAULT '',
+  items JSONB NOT NULL DEFAULT '[]',
+  "totalPrice" NUMERIC NOT NULL DEFAULT 0,
+  "advanceRequired" NUMERIC NOT NULL DEFAULT 0,
+  "balanceDue" NUMERIC NOT NULL DEFAULT 0,
+  "paymentStatus" TEXT NOT NULL DEFAULT 'pendiente',
+  "deliveryStatus" TEXT NOT NULL DEFAULT 'pendiente',
+  notes TEXT DEFAULT '',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3. Crear tabla de configuración (settings)
+CREATE TABLE IF NOT EXISTS settings (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  "whatsappNumber" TEXT,
+  "companyName" TEXT DEFAULT 'Tabitas Store',
+  "yapeNumber" TEXT,
+  "yapeName" TEXT,
+  "plinNumber" TEXT,
+  "plinName" TEXT,
+  "advanceTypeRule" TEXT DEFAULT 'percentage',
+  "flatAdvanceAmount" NUMERIC DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Insertar configuración inicial por defecto
+INSERT INTO settings (id, "whatsappNumber", "companyName", "yapeNumber", "yapeName", "plinNumber", "plinName", "advanceTypeRule", "flatAdvanceAmount")
+VALUES ('default', '51900000000', 'Tabitas Store', '900000000', 'Administrador', '900000000', 'Administrador', 'percentage', 50)
+ON CONFLICT (id) DO NOTHING;
+
+-- Desactivar RLS para acceso público simplificado
+ALTER TABLE products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE settings DISABLE ROW LEVEL SECURITY;`;
 
 export default function App() {
   // Global Persisted States
@@ -101,6 +174,49 @@ export default function App() {
   // Detail Modal State
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+  const [isLoadingSupabase, setIsLoadingSupabase] = useState<boolean>(false);
+  const [supabaseStatus, setSupabaseStatus] = useState<'not_configured' | 'connecting' | 'connected' | 'error'>('not_configured');
+
+  // Load from Supabase on mount
+  useEffect(() => {
+    async function loadData() {
+      if (isSupabaseConfigured) {
+        setSupabaseStatus('connecting');
+        setIsLoadingSupabase(true);
+        try {
+          const dbProducts = await getProductsDb();
+          if (dbProducts) {
+            setProducts(dbProducts);
+          } else {
+            setSupabaseStatus('error');
+            setIsLoadingSupabase(false);
+            return;
+          }
+
+          const dbOrders = await getOrdersDb();
+          if (dbOrders) {
+            setOrders(dbOrders);
+          }
+
+          const dbSettings = await getSettingsDb();
+          if (dbSettings) {
+            setSettings(dbSettings);
+          }
+
+          setSupabaseStatus('connected');
+        } catch (e) {
+          console.error('Error cargando datos de Supabase:', e);
+          setSupabaseStatus('error');
+        } finally {
+          setIsLoadingSupabase(false);
+        }
+      } else {
+        setSupabaseStatus('not_configured');
+      }
+    }
+    loadData();
+  }, []);
+
   // Sync Data to LocalStorage
   useEffect(() => {
     localStorage.setItem('tabitas_products', JSON.stringify(products));
@@ -112,7 +228,10 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('tabitas_settings', JSON.stringify(settings));
-  }, [settings]);
+    if (isSupabaseConfigured && supabaseStatus === 'connected') {
+      saveSettingsDb(settings);
+    }
+  }, [settings, supabaseStatus]);
 
   useEffect(() => {
     localStorage.setItem('tabitas_cart', JSON.stringify(cart));
@@ -165,35 +284,55 @@ export default function App() {
   };
 
   // Product CRUD
-  const handleAddProduct = (newProd: Product) => {
+  const handleAddProduct = async (newProd: Product) => {
     setProducts((prev) => [newProd, ...prev]);
+    if (isSupabaseConfigured && supabaseStatus === 'connected') {
+      await saveProductDb(newProd);
+    }
   };
 
-  const handleUpdateProduct = (updatedProd: Product) => {
+  const handleUpdateProduct = async (updatedProd: Product) => {
     setProducts((prev) => prev.map((p) => (p.id === updatedProd.id ? updatedProd : p)));
+    if (isSupabaseConfigured && supabaseStatus === 'connected') {
+      await saveProductDb(updatedProd);
+    }
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
+    if (isSupabaseConfigured && supabaseStatus === 'connected') {
+      await deleteProductDb(id);
+    }
   };
 
   // Order CRUD
-  const handleAddOrder = (newOrder: Order) => {
+  const handleAddOrder = async (newOrder: Order) => {
     setOrders((prev) => [newOrder, ...prev]);
+    if (isSupabaseConfigured && supabaseStatus === 'connected') {
+      await saveOrderDb(newOrder);
+    }
   };
 
-  const handleUpdateOrderStatus = (
+  const handleUpdateOrderStatus = async (
     id: string,
     field: 'paymentStatus' | 'deliveryStatus',
     value: any
   ) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, [field]: value } : o))
-    );
+    setOrders((prev) => {
+      const updated = prev.map((o) => (o.id === id ? { ...o, [field]: value } : o));
+      const targetOrder = updated.find((o) => o.id === id);
+      if (isSupabaseConfigured && supabaseStatus === 'connected' && targetOrder) {
+        saveOrderDb(targetOrder);
+      }
+      return updated;
+    });
   };
 
-  const handleDeleteOrder = (id: string) => {
+  const handleDeleteOrder = async (id: string) => {
     setOrders((prev) => prev.filter((o) => o.id !== id));
+    if (isSupabaseConfigured && supabaseStatus === 'connected') {
+      await deleteOrderDb(id);
+    }
   };
 
   // Shopping Cart Actions
@@ -1033,6 +1172,26 @@ export default function App() {
                 <div>
                   <h1 className="text-sm font-extrabold font-display tracking-tight text-white flex items-center gap-1.5">
                     {settings.companyName} Panel
+                    {supabaseStatus === 'connected' && (
+                      <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-emerald-500/20">
+                        ● Supabase Conectado
+                      </span>
+                    )}
+                    {supabaseStatus === 'connecting' && (
+                      <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-amber-500/20">
+                        ● Conectando...
+                      </span>
+                    )}
+                    {supabaseStatus === 'error' && (
+                      <span className="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-rose-500/20" title="Hubo un error al conectar con Supabase. Revisa las variables.">
+                        ● Error de Conexión
+                      </span>
+                    )}
+                    {supabaseStatus === 'not_configured' && (
+                      <span className="inline-flex items-center gap-1 bg-slate-500/10 text-slate-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-slate-500/20" title="Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en Vercel">
+                        ● Modo Local (Sin Servidor)
+                      </span>
+                    )}
                   </h1>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none mt-0.5">Control de Negocio</p>
                 </div>
@@ -1146,6 +1305,54 @@ export default function App() {
             ) : (
               /* ADMIN INTERFACE (LOGGED IN) */
               <div className="space-y-8">
+                {supabaseStatus === 'error' && (
+                  <div className="bg-red-50 border border-red-200 rounded-3xl p-6 space-y-4 shadow-sm animate-fade-in">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-red-100 text-red-600 rounded-xl mt-0.5">
+                        <Info className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-xs font-bold text-red-900">⚠️ Error de Sincronización con Supabase</h3>
+                        <p className="text-[11px] text-red-700 leading-relaxed">
+                          Has configurado las variables de entorno de Supabase, pero las tablas (<code>products</code>, <code>orders</code>, <code>settings</code>) no existen aún en tu base de datos de Supabase o no tienen los permisos correctos.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-900 text-slate-100 rounded-2xl p-4 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">🛠️ SQL de Configuración Rápida</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(SUPABASE_SQL_SETUP);
+                            alert('¡SQL de configuración copiado al portapapeles!');
+                          }}
+                          className="text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-white px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1.5 transition-all active:scale-95"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          Copiar Script
+                        </button>
+                      </div>
+                      <p className="text-[9.5px] text-slate-300 leading-normal">
+                        Para solucionar esto en 5 segundos, ve a tu panel de Supabase &gt; <strong>SQL Editor</strong> &gt; presiona en <strong>New Query</strong> (Nueva consulta), pega el siguiente código y presiona <strong>RUN</strong>:
+                      </p>
+                      <pre className="text-[9px] font-mono bg-slate-950 p-3 rounded-xl max-h-48 overflow-y-auto border border-slate-800 text-slate-400 select-all leading-relaxed whitespace-pre">
+                        {SUPABASE_SQL_SETUP}
+                      </pre>
+                      <div className="text-[9.5px] text-slate-400 border-t border-slate-800 pt-2.5 flex flex-col gap-1.5">
+                        <p><strong>Paso adicional para que las fotos se vean en otros dispositivos:</strong></p>
+                        <p>1. Ve a la pestaña <strong>Storage</strong> en tu panel izquierdo de Supabase.</p>
+                        <p>2. Crea un nuevo Bucket llamado exactamente: <code className="bg-slate-800 text-orange-400 px-1 py-0.5 rounded font-mono">productos</code>.</p>
+                        <p>3. Asegúrate de marcarlo como <strong>Public (Público)</strong> para que cualquier dispositivo pueda visualizar las imágenes subidas.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-[10px] text-amber-800 flex items-center gap-2">
+                      <span>💡 <strong>Nota importante:</strong> Tus datos se siguen guardando localmente (Local Storage) para que no pierdas nada de tu trabajo. Una vez que ejecutes el SQL, todo se sincronizará automáticamente.</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Visual Sales / Business Metrics (Admin-Only Dashboard Insights) */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Metric 1 */}
@@ -1196,6 +1403,7 @@ export default function App() {
                     onAddProduct={handleAddProduct}
                     onUpdateProduct={handleUpdateProduct}
                     onDeleteProduct={handleDeleteProduct}
+                    supabaseStatus={supabaseStatus}
                   />
                 )}
 
