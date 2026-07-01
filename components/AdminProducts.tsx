@@ -257,7 +257,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                   {[0, 1, 2].map((index) => {
                     const imageUrl = (editingProduct.images || [])[index];
                     return (
-                      <div key={index} className="border border-slate-200 rounded-2xl p-3 bg-slate-50/50 flex flex-col items-center justify-between min-h-[140px] relative hover:border-slate-300 transition-all">
+                      <div key={index} className="border border-slate-200 rounded-2xl p-3 bg-slate-50/50 flex flex-col items-center justify-between min-h-[160px] relative hover:border-slate-300 transition-all">
                         {uploadingMap[index] ? (
                           <div className="w-full h-full flex flex-col items-center justify-center gap-2 py-4">
                             <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
@@ -271,14 +271,25 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                               className="w-16 h-16 object-cover rounded-xl border border-slate-200 shadow-xs"
                               referrerPolicy="no-referrer"
                             />
-                            <div className="text-[10px] text-slate-400 max-w-full truncate text-center font-mono px-1">
+                            <input
+                              type="text"
+                              value={imageUrl}
+                              onChange={(e) => {
+                                const newImages = [...(editingProduct.images || [])];
+                                newImages[index] = e.target.value;
+                                handleFieldChange('images', newImages);
+                              }}
+                              className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded-lg bg-white text-slate-600 font-mono text-center"
+                              placeholder="URL de la imagen"
+                            />
+                            <div className="text-[9px] text-slate-400 max-w-full truncate text-center font-mono px-1">
                               {imageUrl.startsWith('data:') ? '📂 Archivo local (temporal)' : imageUrl.includes('supabase') ? '☁️ Guardado en Supabase' : '🔗 Enlace de internet'}
                             </div>
                             <button
                               type="button"
                               onClick={() => {
                                 const newImages = [...(editingProduct.images || [])];
-                                newImages.splice(index, 1);
+                                newImages[index] = '';
                                 handleFieldChange('images', newImages);
                               }}
                               className="text-rose-500 hover:text-rose-600 text-xs font-bold flex items-center gap-1 mt-1.5"
@@ -294,8 +305,22 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                             <span className="text-[10px] font-bold text-slate-500 text-center">Foto {index + 1}</span>
                             
                             <div className="flex flex-col gap-1.5 w-full mt-1">
+                              <input
+                                type="text"
+                                placeholder="Pegar URL de imagen..."
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val.trim() !== '') {
+                                    const newImages = [...(editingProduct.images || [])];
+                                    newImages[index] = val;
+                                    handleFieldChange('images', newImages);
+                                  }
+                                }}
+                                className="w-full text-[10px] px-2 py-1 border border-slate-200 rounded-lg bg-white text-center text-slate-700"
+                              />
+                              <div className="text-[9px] text-slate-400 text-center font-semibold">ó también:</div>
                               <label className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-[10px] py-1.5 px-2 rounded-lg cursor-pointer text-center transition-all shadow-2xs">
-                                Adjuntar Foto
+                                Subir Archivo
                                 <input
                                   type="file"
                                   accept="image/*"
@@ -341,20 +366,6 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                                   }}
                                 />
                               </label>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const url = prompt('Ingresa la URL de la imagen de Internet:');
-                                  if (url && url.trim() !== '') {
-                                    const newImages = [...(editingProduct.images || [])];
-                                    newImages[index] = url.trim();
-                                    handleFieldChange('images', newImages);
-                                  }
-                                }}
-                                className="border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold text-[9px] py-1 px-2 rounded-lg transition-all"
-                              >
-                                O pegar URL
-                              </button>
                             </div>
                           </div>
                         )}
